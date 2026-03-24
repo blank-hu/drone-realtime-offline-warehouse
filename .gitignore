@@ -1,0 +1,36 @@
+# IDE
+.idea/
+*.iml
+
+# Java / Maven / Gradle
+target/
+out/
+build/
+*.class
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+derby.log
+
+# Hive / Spark metadata
+metastore_db/
+spark-warehouse/
+
+# Offline generated data
+offline-batch/data/
+offline-batch/warehouse/
+offline-batch/output/
+
+# Flink runtime output
+flink-jobs/output/
+flink-jobs/logs/
+
+# OS
+.DS_Store
+Thumbs.db
