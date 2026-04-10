@@ -23,7 +23,7 @@ public class CollisionHitWindowFn extends ProcessWindowFunction<DwdTrajPoint, Co
     }
 
     @Override
-    public void process(String runId,
+    public void process(String runFrameKey,
                         Context ctx,
                         Iterable<DwdTrajPoint> elements,
                         Collector<CollisionHit> out) {
@@ -32,11 +32,16 @@ public class CollisionHitWindowFn extends ProcessWindowFunction<DwdTrajPoint, Co
         final long now = System.currentTimeMillis();
 
         // 1) 去重：每 drone 只保留 t_ms 最大的一条
+        // 注意：当前 key 已经是 run_id|frame_t_ms，不能再把 key 直接当 run_id 用
         Map<String, FramePoint> latest = new HashMap<>();
+        String realRunId = null;
         for (DwdTrajPoint p : elements) {
-            if (p == null || p.drone_id == null) continue;
+            if (p == null || p.drone_id == null || p.run_id == null) continue;
+            if (realRunId == null) {
+                realRunId = p.run_id;
+            }
             FramePoint fp = latest.get(p.drone_id);
-            if (fp == null || ( p.t_ms > fp.tMs)) {
+            if (fp == null || p.t_ms > fp.tMs) {
                 FramePoint n = new FramePoint();
                 n.runId = p.run_id;
                 n.droneId = p.drone_id;
@@ -50,7 +55,7 @@ public class CollisionHitWindowFn extends ProcessWindowFunction<DwdTrajPoint, Co
                 latest.put(p.drone_id, n);
             }
         }
-        if (latest.size() < 2) return;
+        if (realRunId == null || latest.size() < 2) return;
 
         // 2) 建网格
         Map<Long, List<FramePoint>> grid = new HashMap<>();
@@ -86,7 +91,7 @@ public class CollisionHitWindowFn extends ProcessWindowFunction<DwdTrajPoint, Co
                     if (dist > dMin) continue;
 
                     CollisionHit hit = new CollisionHit();
-                    hit.run_id = runId;
+                    hit.run_id = realRunId;
                     hit.frame_t_ms = frameStart;
                     hit.drone_a = da;
                     hit.drone_b = db;

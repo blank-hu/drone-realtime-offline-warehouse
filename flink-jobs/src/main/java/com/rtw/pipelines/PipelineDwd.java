@@ -140,20 +140,22 @@ public class PipelineDwd {
 
         // =========================================================
 // 6) 碰撞检测 (Collision Detection)
-//    - 计算密集型，必须 keyBy(run_id) 将同一场景的无人机聚到一起
-//    - 使用 Tumbling Window (例如 100ms 或 40ms) 进行快照检测
+//    - 第一版优化：按 run_id + frame_t_ms 打散同一 run 的不同帧
+//    - 仍使用 Tumbling Event-Time Window（40ms）做逐帧快照检测，输出 CollisionHit
 // =========================================================
 
 // 6.1 窗口计算：输出 CollisionHit
         DataStream<CollisionHit> collisionHits = dwd
-                // 关键：必须按 run_id 分组，确保同场景所有飞机在同一窗口
-                .keyBy(p -> p.run_id)
+                .filter(p -> p != null && p.run_id != null && !p.run_id.isEmpty())
+                // 第一版优化：按 run_id + frame_t_ms 分组
+                // 目的：把同一 run 的不同仿真帧打散到多个 subtask 并行执行，降低单 key 热点
+                .keyBy(p -> p.run_id + "|" + alignFrame(p.t_ms, cfg.trajFrameMs))
                 .window(org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows.of(
                         java.time.Duration.ofMillis(cfg.trajFrameMs) // 窗口大小 = 帧间隔，例如 40ms
                 ))
                 // 纯算法逻辑：建 Grid -> 搜 Neighbor -> 输出 Hit
                 .process(new com.rtw.functions.collision.CollisionHitWindowFn(cfg.collisionDistM)) // 假设安全距离 3米
-                .name("collision-hit-window");
+                .name("collision-hit-window-by-run-frame");
 
 
 // =========================================================
@@ -284,6 +286,10 @@ public class PipelineDwd {
     // -----------------------------
     // 5) DWS：按 run 聚合（run_end 触发输出）
     // -----------------------------
+    private static long alignFrame(long tMs, long frameMs) {
+        return Math.floorDiv(tMs, frameMs) * frameMs;
+    }
+
     private static DataStream<DwsRunQuality> buildDwsRunQuality(
             DataStream<DwdTrajPoint> dwd,
             DataStream<OdsTrajPoint> runEndMarker,
@@ -366,18 +372,7 @@ public class PipelineDwd {
                 .name("sink-doris-runmeta");
     }
 
-    // -----------------------------
-    // DWD 写 Doris
-    // -----------------------------
-    private static void sinkDwdToDoris(DataStream<DwdTrajPoint> dwd, AppConfig cfg) {
-        DataStream<String> jsonLines = dwd
-                .map(new PojoToJsonLine<>())
-                .name("dwd-to-json-line");
 
-        String tableId = cfg.dorisDb + "." + cfg.dorisTableDwd;
-        jsonLines.sinkTo(buildDorisJsonLineSink(cfg, tableId, "rtw_dwd"))
-                .name("sink-doris-dwd");
-    }
 
     // -----------------------------
     // 仅异常点写 Doris（轻量 DWD 排障表）

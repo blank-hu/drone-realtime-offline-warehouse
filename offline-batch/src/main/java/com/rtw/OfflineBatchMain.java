@@ -1,5 +1,6 @@
 package com.rtw;
 
+import com.rtw.job.AdsControlEvalBuildJob;
 import com.rtw.job.DwdBuildJob;
 import com.rtw.job.DwsCollisionEventBuildJob;
 import com.rtw.job.DwsOverspeedEventBuildJob;
@@ -18,6 +19,7 @@ public class OfflineBatchMain {
             new DwsOverspeedEventBuildJob().run(spark);
             new DwsCollisionEventBuildJob().run(spark);
             new DwsRunQualityBuildJob().run(spark);
+            new AdsControlEvalBuildJob().run(spark);
         } finally {
             spark.stop();
         }

@@ -17,13 +17,11 @@ public class OfflineSqlViewer {
 
 
             runQuery(spark, "碰撞段异常数据检查",
-                    "select *\n" +
-                            "from drone_dw.dws_collision_event_di\n" +
-                            "order by run_id, drone_a, drone_b, start_t_ms\n" +
-                            "limit 50;",
+                        "select *\n" +
+                            "from ads_control_eval_di\n" +
+                            "order by dt, scenario_id, strategy_id, param_set_id\n" +
+                            "limit 20;",
                     100);
-
-
 
         } finally {
             spark.stop();

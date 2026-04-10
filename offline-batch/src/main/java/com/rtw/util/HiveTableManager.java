@@ -5,6 +5,10 @@ import org.apache.spark.sql.SparkSession;
 
 public class HiveTableManager {
 
+    private static String normPath(String path) {
+        return path.replace('\\', '/');
+    }
+
     public static void initDatabase(SparkSession spark) {
         spark.sql("create database if not exists " + OfflineJobConfig.DB_NAME);
         spark.sql("use " + OfflineJobConfig.DB_NAME);
@@ -29,7 +33,7 @@ public class HiveTableManager {
                         "a_max double, " +
                         "teleport_dist_m double" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.ODS_RUN_META_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.ODS_RUN_META_PATH) + "'"
         );
     }
 
@@ -57,7 +61,7 @@ public class HiveTableManager {
                         "seed int, " +
                         "point_key string" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.ODS_TRAJ_POINT_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.ODS_TRAJ_POINT_PATH) + "'"
         );
     }
 
@@ -91,7 +95,7 @@ public class HiveTableManager {
                         "is_overacc int, " +
                         "is_stuck int" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.DWD_TRAJ_POINT_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.DWD_TRAJ_POINT_PATH) + "'"
         );
     }
 
@@ -119,7 +123,7 @@ public class HiveTableManager {
                         "snapshot_ms bigint, " +
                         "score_weights_json string" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.DWS_RUN_QUALITY_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.DWS_RUN_QUALITY_PATH) + "'"
         );
     }
 
@@ -151,9 +155,10 @@ public class HiveTableManager {
                         "seed int, " +
                         "update_ms bigint" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.DWS_OVERSPEED_EVENT_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.DWS_OVERSPEED_EVENT_PATH) + "'"
         );
     }
+
     public static void createDwsCollisionEventTable(SparkSession spark) {
         spark.sql(
                 "create table if not exists " + OfflineJobConfig.DB_NAME + ".dws_collision_event_di (" +
@@ -187,8 +192,53 @@ public class HiveTableManager {
                         "seed int, " +
                         "update_ms bigint" +
                         ") using parquet " +
-                        "location '" + OfflineJobConfig.DWS_COLLISION_EVENT_PATH.replace("\\", "/") + "'"
+                        "location '" + normPath(OfflineJobConfig.DWS_COLLISION_EVENT_PATH) + "'"
         );
     }
-    
+
+    public static void createAdsControlEvalTable(SparkSession spark) {
+        spark.sql(
+                "create table if not exists " + OfflineJobConfig.DB_NAME + ".ads_control_eval_di (" +
+                        "dt date, " +
+                        "scenario_id string, " +
+                        "strategy_id string, " +
+                        "strategy_version string, " +
+                        "param_set_id string, " +
+                        "param_json string, " +
+                        "sample_run_cnt bigint, " +
+                        "success_run_cnt bigint, " +
+                        "success_rate double, " +
+                        "avg_drone_cnt double, " +
+                        "avg_duration_ms double, " +
+                        "base_v_max double, " +
+                        "base_a_max double, " +
+                        "base_teleport_dist_m double, " +
+                        "avg_collision_event_cnt double, " +
+                        "avg_collision_frames_cnt double, " +
+                        "group_min_collision_dist double, " +
+                        "avg_collision_avg_dist double, " +
+                        "avg_collision_avg_duration_ms double, " +
+                        "avg_hotspot_hit_cnt double, " +
+                        "avg_hotspot_cell_cnt double, " +
+                        "avg_hotspot_top1_ratio double, " +
+                        "top_hotspot_json string, " +
+                        "avg_overspeed_cnt double, " +
+                        "avg_overacc_cnt double, " +
+                        "avg_teleport_cnt double, " +
+                        "avg_speed_p95 double, " +
+                        "avg_abs_acc_p95 double, " +
+                        "avg_speed_std double, " +
+                        "avg_abs_acc_std double, " +
+                        "collision_score double, " +
+                        "hotspot_score double, " +
+                        "motion_score double, " +
+                        "total_score double, " +
+                        "eval_level string, " +
+                        "suggestion_type string, " +
+                        "suggestion_reason_json string, " +
+                        "update_ms bigint" +
+                        ") using parquet " +
+                        "location '" + normPath(OfflineJobConfig.ADS_CONTROL_EVAL_PATH) + "'"
+        );
+    }
 }
